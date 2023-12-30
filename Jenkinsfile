@@ -24,9 +24,9 @@ pipeline {
         }
         stage('Build') {
             agent {
-              docker {
-                  image 'node:lts-buster-slim'
-              }
+                docker {
+                    image 'node:lts-buster-slim'
+                }
             }
             steps {
                 sh 'npm install'
@@ -34,19 +34,20 @@ pipeline {
         }
         stage('Test') {
             agent {
-              docker {
-                  image 'node:lts-buster-slim'
-              }
+                docker {
+                    image 'node:lts-buster-slim'
+                }
             }
             steps {
                 sh 'npm run test'
             }
         }
+        stage('TruffleHog Scan via SSH') {
             steps {
                 script {
                     // SSH Login to server and run TruffleHog
                     sshagent([SSH_KEY]) {
-                        sh "telsec@192.168.0.101 'trufflehog --json --exit-code 1 https://github.com/SamCyber01/NodeGoat.git' > trufflehog-output.json"
+                        sh "ssh telsec@192.168.0.101 'trufflehog --json --exit-code 1 https://github.com/SamCyber01/NodeGoat.git' > trufflehog-output.json"
                     }
                     // Check for high or critical severity in TruffleHog output
                     def trufflehogOutput = readJSON file: 'trufflehog-output.json'
@@ -78,7 +79,6 @@ pipeline {
                 }
             }
         }
-
         stage('SAST with Snyk') {
             steps {
                 script {
@@ -94,16 +94,16 @@ pipeline {
     }
     post {
         always {
-        // Contoh langkah: menampilkan pesan di log
-        echo "Pipeline selesai."
+            // Contoh langkah: menampilkan pesan di log
+            echo "Pipeline selesai."
         }
         failure {
-        // Tindakan jika pipeline gagal
-        echo "Pipeline terdapat kerentanan dengan severity high atau critical."
+            // Tindakan jika pipeline gagal
+            echo "Pipeline terdapat kerentanan dengan severity high atau critical."
         }
         success {
-        // Tindakan jika pipeline sukses
-        echo "Pipeline sukses."
+            // Tindakan jika pipeline sukses
+            echo "Pipeline sukses."
         }
     }
 }
