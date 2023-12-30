@@ -122,10 +122,10 @@ pipeline {
             }
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: "DeploymentSSHKey", keyFileVariable: 'keyfile')]) {
-                    sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.104 "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"'
-                    sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.104 docker pull xenjutsu/nodegoat:0.1'
-                    sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.104 docker rm --force nodegoat'
-                    sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.104 docker run -it --detach -p 4000:4000 --name nodegoat --network host xenjutsu/nodegoat:0.1'
+                    sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.102 "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"'
+                    sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.102 docker pull xenjutsu/nodegoat:0.1'
+                    sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.102 docker rm --force nodegoat'
+                    sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.102 docker run -it --detach -p 4000:4000 --name nodegoat --network host xenjutsu/nodegoat:0.1'
                 }
             }
         }
@@ -138,7 +138,7 @@ pipeline {
             }
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    sh 'nuclei -u http://192.168.0.104:4000 -nc -j > nuclei-report.json'
+                    sh 'nuclei -u http://192.168.0.102:4000 -nc -j > nuclei-report.json'
                     sh 'cat nuclei-report.json'
                 }
                 archiveArtifacts artifacts: 'nuclei-report.json'
@@ -153,7 +153,7 @@ pipeline {
             }
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    sh 'zap-baseline.py -t http://192.168.0.104:4000 -r zapbaseline.html -x zapbaseline.xml'
+                    sh 'zap-baseline.py -t http://192.168.0.102:4000 -r zapbaseline.html -x zapbaseline.xml'
                 }
                 sh 'cp /zap/wrk/zapbaseline.html ./zapbaseline.html'
                 sh 'cp /zap/wrk/zapbaseline.xml ./zapbaseline.xml'
@@ -175,11 +175,11 @@ pipeline {
                     sh 'apt-get install openssh-server sshpass -y'
                     sh 'mkdir ~/.ssh'
                     sh 'touch ~/.ssh/known_hosts'
-                    sh 'ssh-keyscan 192.168.0.104 >> ~/.ssh/known_hosts'
+                    sh 'ssh-keyscan 192.168.0.102 >> ~/.ssh/known_hosts'
                     sh 'ansible-galaxy install dev-sec.os-hardening'
                     sh """cat > inventory.ini <<EOL
 [ubuntuserver]
-192.168.0.104 ansible_user=jenkins ansible_password=jenkins
+192.168.0.102 ansible_user=jenkins ansible_password=jenkins
 EOL
 """
                     sh """cat > ansible-hardening.yml <<EOL
