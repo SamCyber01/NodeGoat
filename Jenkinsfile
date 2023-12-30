@@ -3,8 +3,8 @@ pipeline {
     environment {
         // Define your credentials
         DOCKERHUB_CREDENTIALS = credentials('DockerLogin')
-        SNYK_CREDENTIALS = credentials('Snyk')
-        SSH_KEY = credentials('ssh-key-id')
+        SNYK_CREDENTIALS = credentials('SnykToken')
+        SSH_KEY = credentials('DeploymentSSHKey')
     }
     stages {
         stage('Secret Scanning with TruffleHog') {
@@ -12,7 +12,7 @@ pipeline {
                 script {
                     // SSH Login to server and run TruffleHog
                     sshagent([SSH_KEY]) {
-                        sh "ssh user@your-server 'trufflehog --json --exit-code 1 <your-git-repo-url>' > trufflehog-output.json"
+                        sh "telsec@192.168.0.102 'trufflehog --json --exit-code 1 <your-git-repo-url>' > trufflehog-output.json"
                     }
                     // Check for high or critical severity in TruffleHog output
                     def trufflehogOutput = readJSON file: 'trufflehog-output.json'
