@@ -42,7 +42,7 @@ pipeline {
                 sh 'npm run test'
             }
         }
-        */
+        /*
         stage('TruffleHog Scan via SSH') {
             steps {
                 script {
