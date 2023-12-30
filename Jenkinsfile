@@ -12,7 +12,7 @@ pipeline {
                 script {
                     // SSH Login to server and run TruffleHog
                     sshagent([SSH_KEY]) {
-                        sh "telsec@192.168.0.102 'trufflehog --json --exit-code 1 https://github.com/SamCyber01/NodeGoat.git' > trufflehog-output.json"
+                        sh "telsec@192.168.0.101 'trufflehog --json --exit-code 1 https://github.com/SamCyber01/NodeGoat.git' > trufflehog-output.json"
                     }
                     // Check for high or critical severity in TruffleHog output
                     def trufflehogOutput = readJSON file: 'trufflehog-output.json'
