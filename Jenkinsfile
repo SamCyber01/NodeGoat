@@ -60,7 +60,16 @@ pipeline {
     }
     post {
         always {
-            // Clean up, logout from Snyk, etc.
+        // Contoh langkah: menampilkan pesan di log
+        echo "Pipeline selesai."
+        }
+        failure {
+        // Tindakan jika pipeline gagal
+        echo "Pipeline terdapat kerentanan dengan severity high atau critical."
+        }
+        success {
+        // Tindakan jika pipeline sukses
+        echo "Pipeline sukses."
         }
     }
 }
