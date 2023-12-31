@@ -16,17 +16,20 @@ pipeline {
             }
             steps {
                 script {
-                    try {
-                        // Menggunakan TruffleHog dalam container Docker
-                        docker.image('trufflesecurity/trufflehog:latest').inside {
-                            sh 'trufflehog --json https://github.com/SamCyber01/NodeGoat.git > trufflehog-output.json'
-                        }
-                    } catch (Exception e) {
-                        echo "TruffleHog scan failed: ${e.getMessage()}"
+                    // Menjalankan TruffleHog menggunakan Docker
+                    docker.image('trufflesecurity/trufflehog:latest').inside {
+                        sh 'trufflehog --json https://github.com/SamCyber01/NodeGoat.git > trufflehog-results.json'
+                    }
+
+                    // Menganalisis hasil TruffleHog
+                    def results = readJSON file: 'trufflehog-results.json'
+                    if (results.any { it.severity == 'high' || it.severity == 'critical' }) {
+                        error("TruffleHog scan found high or critical severity issues.")
                     }
                 }
             }
         }
+    }
         stage('Build') {
             agent {
               docker {
