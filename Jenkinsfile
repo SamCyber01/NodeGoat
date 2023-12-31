@@ -88,6 +88,12 @@ pipeline {
         }
 
         stage('SAST with Snyk') {
+            agent {
+              docker {
+                  image 'snyk/snyk:node'
+                  args '-u root --network host --env SNYK_TOKEN=$SNYK_CREDENTIALS_PSW --entrypoint='
+              }
+            }
             steps {
                 script {
                     try {
