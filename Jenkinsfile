@@ -8,6 +8,12 @@ pipeline {
     }
     stages {
         stage('Secret Scanning with TruffleHog') {
+            agent {
+                docker {
+                    image 'trufflesecurity/trufflehog:latest'
+                    args '-u root --entrypoint='
+                }
+            }
             steps {
                 script {
                     try {
@@ -21,7 +27,33 @@ pipeline {
                 }
             }
         }
-        stage('SCA with Snyk and Retire.js') {
+        stage('Build') {
+            agent {
+              docker {
+                  image 'node:lts-buster-slim'
+              }
+            }
+            steps {
+                sh 'npm install'
+            }
+        }
+        stage('Test') {
+            agent {
+              docker {
+                  image 'node:lts-buster-slim'
+              }
+            }
+            steps {
+                sh 'npm run test'
+            }
+        }
+        stage('SCA Snyk Test') {
+            agent {
+              docker {
+                  image 'snyk/snyk:node'
+                  args '-u root --network host --env SNYK_TOKEN=$SNYK_CREDENTIALS_PSW --entrypoint='
+              }
+            }
             steps {
                 script {
                     try {
@@ -33,6 +65,21 @@ pipeline {
                         if (snykOutput.vulnerabilities.any { it.severity == 'high' || it.severity == 'critical' }) {
                             error("High or critical severity issue found in Snyk SCA scan")
                         }
+        stage('SCA Retire Js') {
+            agent {
+              docker {
+                  image 'node:lts-buster-slim'
+              }
+            }
+            steps {
+                sh 'npm install retire'
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    sh './node_modules/retire/lib/cli.js --outputpath retire-scan-report.txt'
+                }
+                sh 'cat retire-scan-report.txt'
+                archiveArtifacts artifacts: 'retire-scan-report.txt'
+            }
+        }
                         // SCA dengan Retire.js
                         sh "retire --outputformat json > retire-output.json"
                     } catch (Exception e) {
