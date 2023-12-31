@@ -19,8 +19,6 @@ pipeline {
                         docker.image('trufflesecurity/trufflehog:latest').inside {
                             sh 'trufflehog --json https://github.com/SamCyber01/NodeGoat.git > trufflehog-output.json'
                         }
-                        // Analisis output TruffleHog
-                        // Tambahkan logika untuk mengecek severity jika diperlukan
                     } catch (Exception e) {
                         echo "TruffleHog scan failed: ${e.getMessage()}"
                     }
@@ -44,7 +42,6 @@ pipeline {
 
                         // SCA dengan Retire.js
                         sh "retire --outputformat json > retire-output.json"
-                        // Tambahkan logika analisis output dari Retire.js
                     } catch (Exception e) {
                         echo "SCA scan failed: ${e.getMessage()}"
                     }
@@ -68,6 +65,7 @@ pipeline {
                 }
             }
         }
+
         stage('Build and Push Docker Image') {
             steps {
                 script {
@@ -99,7 +97,7 @@ pipeline {
             }
         }
     }
-}
+
     post {
         always {
             echo "Pipeline selesai."
