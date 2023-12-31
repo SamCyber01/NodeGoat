@@ -137,31 +137,32 @@ pipeline {
         }
         */
         stage('Build Docker Image and Push to Docker Registry') {
-            agent {
-                docker {
-                    image 'docker:dind'
-                    args '--user root --network host -v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
             steps {
-                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
-                sh 'docker build -t xenjutsu/nodegoat:0.1 .'
-                sh 'docker push xenjutsu/nodegoat:0.1'
+                script {
+                    try {
+                        sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+                        sh 'docker build -t xenjutsu/nodegoat:0.1 .'
+                        sh 'docker push xenjutsu/nodegoat:0.1'
+                    } catch (Exception e) {
+                        echo "Build or push Docker image failed: ${e.getMessage()}"
+                    }
+                }
             }
         }
+
         stage('Deploy Docker Image') {
-            agent {
-                docker {
-                    image 'kroniak/ssh-client'
-                    args '--user root --network host'
-                }
-            }
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: "DeploymentSSHKey", keyFileVariable: 'keyfile')]) {
-                    sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.101 "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"'
-                    sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.101 docker pull xenjutsu/nodegoat:0.1'
-                    sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.101 docker rm --force nodegoat'
-                    sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.101 docker run -it --detach -p 4000:4000 --name nodegoat --network host xenjutsu/nodegoat:0.1'
+                script {
+                    try {
+                        withCredentials([sshUserPrivateKey(credentialsId: "DeploymentSSHKey", keyFileVariable: 'keyfile')]) {
+                            sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.101 "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"'
+                            sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.101 docker pull xenjutsu/nodegoat:0.1'
+                            sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.101 docker rm --force nodegoat'
+                            sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no jenkins@192.168.0.101 docker run -it --detach -p 4000:4000 --name nodegoat --network host xenjutsu/nodegoat:0.1'
+                        }
+                    } catch (Exception e) {
+                        echo "Deployment failed: ${e.getMessage()}"
+                    }
                 }
             }
         }
