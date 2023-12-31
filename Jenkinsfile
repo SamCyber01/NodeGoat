@@ -16,6 +16,13 @@ pipeline {
                 }
             }
             steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    sh 'trufflehog filesystem . --exclude-paths trufflehog-excluded-paths.txt --fail --json > trufflehog-scan-result.json'
+                }
+                sh 'cat trufflehog-scan-result.json'
+                archiveArtifacts artifacts: 'trufflehog-scan-result.json'
+            }
+            steps {
                 script {
                     docker.image('trufflesecurity/trufflehog:latest').inside {
                         sh 'trufflehog --json https://github.com/SamCyber01/NodeGoat.git > trufflehog-results.json'
