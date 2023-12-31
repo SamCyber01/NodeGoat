@@ -22,18 +22,6 @@ pipeline {
                 sh 'cat trufflehog-scan-result.json'
                 archiveArtifacts artifacts: 'trufflehog-scan-result.json'
             }
-            steps {
-                script {
-                    docker.image('trufflesecurity/trufflehog:latest').inside {
-                        sh 'trufflehog --json https://github.com/SamCyber01/NodeGoat.git > trufflehog-results.json'
-                    }
-
-                    def results = readJSON file: 'trufflehog-results.json'
-                    if (results.any { it.severity == 'high' || it.severity == 'critical' }) {
-                        error("TruffleHog scan found high or critical severity issues.")
-                    }
-                }
-            }
         }
 
         stage('Build') {
