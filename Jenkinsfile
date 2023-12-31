@@ -6,6 +6,7 @@ pipeline {
         SNYK_CREDENTIALS = credentials('SnykToken')
         DOCKERHUB_CREDENTIALS = credentials('DockerLogin')
     }
+
     stages {
         stage('Secret Scanning with TruffleHog') {
             agent {
@@ -16,12 +17,10 @@ pipeline {
             }
             steps {
                 script {
-                    // Menjalankan TruffleHog menggunakan Docker
                     docker.image('trufflesecurity/trufflehog:latest').inside {
                         sh 'trufflehog --json https://github.com/SamCyber01/NodeGoat.git > trufflehog-results.json'
                     }
 
-                    // Menganalisis hasil TruffleHog
                     def results = readJSON file: 'trufflehog-results.json'
                     if (results.any { it.severity == 'high' || it.severity == 'critical' }) {
                         error("TruffleHog scan found high or critical severity issues.")
@@ -29,73 +28,74 @@ pipeline {
                 }
             }
         }
-    }
+
         stage('Build') {
             agent {
-              docker {
-                  image 'node:lts-buster-slim'
-              }
+                docker {
+                    image 'node:lts-buster-slim'
+                }
             }
             steps {
                 sh 'npm install'
             }
         }
+
         stage('Test') {
             agent {
-              docker {
-                  image 'node:lts-buster-slim'
-              }
+                docker {
+                    image 'node:lts-buster-slim'
+                }
             }
             steps {
                 sh 'npm run test'
             }
         }
+
         stage('SCA Snyk Test') {
             agent {
-              docker {
-                  image 'snyk/snyk:node'
-                  args '-u root --network host --env SNYK_TOKEN=$SNYK_CREDENTIALS_PSW --entrypoint='
-              }
+                docker {
+                    image 'snyk/snyk:node'
+                    args '-u root --network host --env SNYK_TOKEN=$SNYK_CREDENTIALS_PSW --entrypoint='
+                }
             }
             steps {
                 script {
                     try {
-                        // Autentikasi dengan Snyk
                         sh "snyk auth ${SNYK_CREDENTIALS}"
-                        // SCA dengan Snyk
                         sh "snyk test --json > snyk-output.json"
                         def snykOutput = readJSON file: 'snyk-output.json'
                         if (snykOutput.vulnerabilities.any { it.severity == 'high' || it.severity == 'critical' }) {
                             error("High or critical severity issue found in Snyk SCA scan")
                         }
-        stage('SCA Retire Js') {
-            agent {
-              docker {
-                  image 'node:lts-buster-slim'
-              }
-            }
-            steps {
-                sh 'npm install retire'
-                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    sh './node_modules/retire/lib/cli.js --outputpath retire-scan-report.txt'
-                }
-                sh 'cat retire-scan-report.txt'
-                archiveArtifacts artifacts: 'retire-scan-report.txt'
-            }
-        }
-                        // SCA dengan Retire.js
-                        sh "retire --outputformat json > retire-output.json"
                     } catch (Exception e) {
                         echo "SCA scan failed: ${e.getMessage()}"
                     }
                 }
             }
         }
+
+        stage('SCA Retire Js') {
+            agent {
+                docker {
+                    image 'node:lts-buster-slim'
+                }
+            }
+            steps {
+                script {
+                    sh 'npm install retire'
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        sh './node_modules/retire/lib/cli.js --outputpath retire-scan-report.txt'
+                    }
+                    sh 'cat retire-scan-report.txt'
+                    archiveArtifacts artifacts: 'retire-scan-report.txt'
+                }
+            }
+        }
+
         stage('SAST with Snyk') {
             steps {
                 script {
                     try {
-                        // SAST dengan Snyk
                         sh "snyk code test --severity-threshold=high > snyk-code-output.json"
                         def snykCodeOutput = readJSON file: 'snyk-code-output.json'
                         if (snykCodeOutput.any { it.severity == 'high' || it.severity == 'critical' }) {
@@ -107,38 +107,7 @@ pipeline {
                 }
             }
         }
-        /*
-        stage('Build and Push Docker Image') {
-            steps {
-                script {
-                    // Login ke Docker Hub
-                    sh "docker login -u ${DOCKERHUB_CREDENTIALS_USR} -p ${DOCKERHUB_CREDENTIALS_PSW}"
-                    // Membangun image Docker
-                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-                    // Push image ke Docker Hub
-                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-                }
-            }
-        }
-        
-        stage('Deploy to Server') {
-            steps {
-                script {
-                    try {
-                        // Langkah-langkah untuk deploy image ke server target
-                        sshagent(credentials: ['SSH_CREDENTIALS_ID']) {
-                            // Menarik image Docker di server target
-                            sh "ssh -o StrictHostKeyChecking=no ${TARGET_SERVER} 'docker pull ${IMAGE_NAME}:${IMAGE_TAG}'"
-                            // Jalankan container Docker di server target
-                            sh "ssh -o StrictHostKeyChecking=no ${TARGET_SERVER} 'docker run -d --name my-container-name -p 80:80 ${IMAGE_NAME}:${IMAGE_TAG}'"
-                        }
-                    } catch (Exception e) {
-                        echo "Deployment failed: ${e.getMessage()}"
-                    }
-                }
-            }
-        }
-        */
+
         stage('Build Docker Image and Push to Docker Registry') {
             steps {
                 script {
@@ -170,6 +139,7 @@ pipeline {
             }
         }
     }
+
     post {
         always {
             echo "Pipeline selesai."
