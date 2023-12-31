@@ -155,7 +155,7 @@ pipeline {
                 script {
                     try {
                         withCredentials([sshUserPrivateKey(credentialsId: "DeploymentSSHKey", keyFileVariable: 'keyfile')]) {
-                            sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no telse@192.168.0.101 "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"'
+                            sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no telsec@192.168.0.101 "echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin"'
                             sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no telsec@192.168.0.101 docker pull xenjutsu/nodegoat:0.1'
                             sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no telsec@192.168.0.101 docker rm --force nodegoat'
                             sh 'ssh -i ${keyfile} -o StrictHostKeyChecking=no telsec@192.168.0.101 docker run -it --detach -p 4000:4000 --name nodegoat --network host xenjutsu/nodegoat:0.1'
