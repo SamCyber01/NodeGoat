@@ -99,8 +99,7 @@ pipeline {
             }
         }
     }
-    }
-
+}
     post {
         always {
             echo "Pipeline selesai."
