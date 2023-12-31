@@ -4,10 +4,6 @@ pipeline {
     environment {
         // Pastikan untuk mengganti dengan kredensial yang sesuai
         SNYK_CREDENTIALS = credentials('SnykToken')
-        DOCKERHUB_CREDENTIALS = credentials('DockerLogin')
-        TARGET_SERVER = '192.168.0.101'
-        IMAGE_NAME = 'jenkins-docker'
-        IMAGE_TAG = 'dind'
     }
 
     stages {
@@ -19,6 +15,8 @@ pipeline {
                         docker.image('trufflesecurity/trufflehog:latest').inside {
                             sh 'trufflehog --json https://github.com/SamCyber01/NodeGoat.git > trufflehog-output.json'
                         }
+                        // Analisis output TruffleHog
+                        // Tambahkan logika untuk mengecek severity jika diperlukan
                     } catch (Exception e) {
                         echo "TruffleHog scan failed: ${e.getMessage()}"
                     }
@@ -42,6 +40,7 @@ pipeline {
 
                         // SCA dengan Retire.js
                         sh "retire --outputformat json > retire-output.json"
+                        // Tambahkan logika analisis output dari Retire.js
                     } catch (Exception e) {
                         echo "SCA scan failed: ${e.getMessage()}"
                     }
@@ -61,37 +60,6 @@ pipeline {
                         }
                     } catch (Exception e) {
                         echo "SAST scan failed: ${e.getMessage()}"
-                    }
-                }
-            }
-        }
-
-        stage('Build and Push Docker Image') {
-            steps {
-                script {
-                    // Login ke Docker Hub
-                    sh "docker login -u ${DOCKERHUB_CREDENTIALS_USR} -p ${DOCKERHUB_CREDENTIALS_PSW}"
-                    // Membangun image Docker
-                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-                    // Push image ke Docker Hub
-                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-                }
-            }
-        }
-
-        stage('Deploy to Server') {
-            steps {
-                script {
-                    try {
-                        // Langkah-langkah untuk deploy image ke server target
-                        sshagent(credentials: ['SSH_CREDENTIALS_ID']) {
-                            // Menarik image Docker di server target
-                            sh "ssh -o StrictHostKeyChecking=no ${TARGET_SERVER} 'docker pull ${IMAGE_NAME}:${IMAGE_TAG}'"
-                            // Jalankan container Docker di server target
-                            sh "ssh -o StrictHostKeyChecking=no ${TARGET_SERVER} 'docker run -d --name my-container-name -p 80:80 ${IMAGE_NAME}:${IMAGE_TAG}'"
-                        }
-                    } catch (Exception e) {
-                        echo "Deployment failed: ${e.getMessage()}"
                     }
                 }
             }
